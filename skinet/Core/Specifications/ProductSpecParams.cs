@@ -1,5 +1,5 @@
-using System;
-
+//it using for Sort the items by Brands and Types 
+//We can use Search Functionality For Search Product
 namespace Core.Specifications;
 
 public class ProductSpecParams

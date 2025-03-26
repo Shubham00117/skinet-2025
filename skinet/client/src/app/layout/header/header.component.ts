@@ -8,6 +8,7 @@ import {
   MatProgressBar,
   MatProgressBarModule,
 } from '@angular/material/progress-bar';
+import { CartService } from '../../core/services/cart.service';
 @Component({
   selector: 'app-header',
   standalone: true,
@@ -24,4 +25,5 @@ import {
 })
 export class HeaderComponent {
   busyService = inject(BusyService);
+  cartService = inject(CartService);
 }

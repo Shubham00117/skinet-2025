@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Cart, CartItem } from '../../shared/models/cart';
 import { Product } from '../../shared/models/product';
 import { map } from 'rxjs';
+import { DeliveryMethod } from '../../shared/models/deliveryMethods';
 
 @Injectable({
   providedIn: 'root',
@@ -11,19 +12,20 @@ import { map } from 'rxjs';
 export class CartService {
   baseUrl = environment.apiUrl;
   private http = inject(HttpClient);
-
   cart = signal<Cart | null>(null);
   itemCount = computed(() => {
     return this.cart()?.items.reduce((sum, item) => sum + item.quantity, 0);
   });
+  selectedDelivery = signal<DeliveryMethod | null>(null);
   totals = computed(() => {
     const cart = this.cart();
+    const delivery = this.selectedDelivery();
     if (!cart) return null;
     const subtotal = cart.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    const shipping = 0;
+    const shipping = delivery ? delivery.price : 0;
     const discount = 0;
     return {
       subtotal,
@@ -43,21 +45,20 @@ export class CartService {
   }
 
   setCart(cart: Cart) {
-    return this.http.post<Cart>(`${this.baseUrl}cart`, cart).subscribe({
-      next: (updatedCart) => this.cart.set(updatedCart),
+    return this.http.post<Cart>(this.baseUrl + 'cart', cart).subscribe({
+      next: (cart) => this.cart.set(cart),
     });
   }
 
   addItemToCart(item: CartItem | Product, quantity = 1) {
     const cart = this.cart() ?? this.createCart();
-
     if (this.isProduct(item)) {
       item = this.mapProductToCartItem(item);
     }
-
     cart.items = this.addOrUpdateItem(cart.items, item, quantity);
     this.setCart(cart);
   }
+
   removeItemFromCart(productId: number, quantity = 1) {
     const cart = this.cart();
     if (!cart) return;
@@ -75,6 +76,7 @@ export class CartService {
       }
     }
   }
+
   deleteCart() {
     this.http.delete(this.baseUrl + 'cart?id=' + this.cart()?.id).subscribe({
       next: () => {
@@ -99,10 +101,6 @@ export class CartService {
     return items;
   }
 
-  private isProduct(item: CartItem | Product): item is Product {
-    return (item as Product).id !== undefined;
-  }
-
   private mapProductToCartItem(item: Product): CartItem {
     return {
       productId: item.id,
@@ -115,14 +113,13 @@ export class CartService {
     };
   }
 
-  private createCart(): Cart {
-    const cart = { id: this.generateUniqueId(), items: [] } as Cart;
-    localStorage.setItem('cart_id', cart.id);
-    this.cart.set(cart);
-    return cart;
+  private isProduct(item: CartItem | Product): item is Product {
+    return (item as Product).id !== undefined;
   }
 
-  private generateUniqueId(): string {
-    return Math.random().toString(36).substring(2, 15);
+  private createCart(): Cart {
+    const cart = new Cart();
+    localStorage.setItem('cart_id', cart.id);
+    return cart;
   }
 }
